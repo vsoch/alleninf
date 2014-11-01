@@ -2,36 +2,55 @@ alleninf
 ========
 
 Compare an unthresholded statistical map of a brain with gene expression patterns from [Allen Human Brain Atlas](http://human.brain-map.org/).
+UNDER CONSTRUCTION
+
+Credits
+------------
+
+    Forked from https://github.com/chrisfilo/alleninf.git
+
 
 Installation
 ------------
 
-    pip install git+https://github.com/chrisfilo/alleninf.git
+    pip install git+https://github.com/vsoch/alleninf.git
 
 Usage
 -----
 
-
+	To query for a specific gene:
 	usage: scripts.py [-h] [--inference_method INFERENCE_METHOD]
 	                  [--n_samples N_SAMPLES] [--n_burnin N_BURNIN]
 	                  [--probes_reduction_method PROBES_REDUCTION_METHOD]
 	                  [--mask MASK] [--radius RADIUS]
 	                  [--probe_exclusion_keyword PROBE_EXCLUSION_KEYWORD]
+	                  [--all_genes False]
 	                  stat_map gene_name
+
+	To query all genes in Allen Brain Human Atlas:
+	usage: scripts.py [-h] [--inference_method INFERENCE_METHOD]
+	                  [--n_samples N_SAMPLES] [--n_burnin N_BURNIN]
+	                  [--probes_reduction_method PROBES_REDUCTION_METHOD]
+	                  [--mask MASK] [--radius RADIUS]
+	                  [--probe_exclusion_keyword PROBE_EXCLUSION_KEYWORD]
+	                  [--all_genes True]
+	                  stat_map
 	
 	Compare a statistical map with gene expression patterns from Allen Human Brain
 	Atlas.
 	
-	positional arguments:
+	required arguments:
 	  stat_map              Unthresholded statistical map in the form of a 3D
 	                        NIFTI file (.nii or .nii.gz) in MNI space.
-	  gene_name             Name of the gene you want to compare your map with.
-	                        For list of all available genes see: http://help
-	                        .brain-map.org/download/attachments/2818165/HBA_ISH_Ge
-	                        neList.pdf?version=1&modificationDate=1348783035873.
 	
 	optional arguments:
 	  -h, --help            show this help message and exit
+
+	  gene_name           Name of the gene you want to compare your map with.
+	                        For list of all available genes see: http://help
+	                        .brain-map.org/download/attachments/2818165/HBA_ISH_Ge
+	                        neList.pdf?version=1&modificationDate=1348783035873.
+
 	  --inference_method INFERENCE_METHOD
 	                        Which model to use: fixed - fixed effects,
 	                        approximate_random - approximate random effects
@@ -62,6 +81,7 @@ Usage
 Example
 -------
 
+    # Querying for a single gene
     $ alleninf SetA-SetB_Tstat.nii.gz HTR1A --mask SetA_mean.nii.gz
 
     Fetching probe ids for gene HTR1A
