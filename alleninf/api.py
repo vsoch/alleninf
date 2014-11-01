@@ -1,36 +1,56 @@
 import json
 import urllib2
 import os
-from tables import open_file
+#from tables import open_file deleting because I don't have tables'
 import pandas as pd
 import numpy as np
+import pickle
 from alleninf.datasets import fetch_microarray_expression
 
 api_url = "http://api.brain-map.org/api/v2/data/query.json"
 
+# Here we will load all probes assigned to each gene from the Allen Brain Atlas, saved in pickle object
+def get_all_probes():
+    probes = pd.io.pickle.read_pickle("data/gene_probe_lookup.pkl")
+    return probes
 
+# Load list of unique genes
+def get_genes():
+    return pickle.load(open("data/unique_genes.pkl","rb"))
+
+def get_genes_lookup():
+    return pickle.load(open("data/gene_probe_lookup.pkl",'rb'))
+
+# Here is if we want to get a set of probes from genes, querying the atlas
 def get_probes_from_genes(gene_names):
     if not isinstance(gene_names, list):
         gene_names = [gene_names]
     # in case there are white spaces in gene names
     gene_names = ["'%s'" % gene_name for gene_name in gene_names]
+    
+    probe_lookup = dict()
+    probe_notfound = []
+    # We need to download each gene separately
+    for g in range(0,len(gene_names)):
+      gene = gene_names[g]
+      print "Querying for gene " + gene + ": " + str(g) + " of " + str(len(gene_names))
+      api_query = "?criteria=model::Probe"
+      api_query += ",rma::criteria,[probe_type$eq'DNA']"
+      api_query += ",products[abbreviation$eq'HumanMA']"
+      api_query += ",gene[acronym$eq%s]" % (','.join(gene))
+      api_query += ",rma::options[only$eq'probes.id','name']"
+      data = json.load(urllib2.urlopen(api_url + api_query))
+      d = {probe['id']: probe['name'] for probe in data['msg']}
+      if d:
+        probe_lookup[gene] = d
+      else:
+        probe_notfound.append(gene)
 
-    api_query = "?criteria=model::Probe"
-    api_query += ",rma::criteria,[probe_type$eq'DNA']"
-    api_query += ",products[abbreviation$eq'HumanMA']"
-    api_query += ",gene[acronym$eq%s]" % (','.join(gene_names))
-    api_query += ",rma::options[only$eq'probes.id','name']"
+    if len(notfound >0):
+      print "Genes not found during analysis: " + str(notfound)
+      print "See http://help.brain-map.org/download/attachments/2818165/HBA_ISH_GeneList.pdf?version=1&modificationDate=1348783035873 for list of available genes."
 
-    data = json.load(urllib2.urlopen(api_url + api_query))
-
-    d = {probe['id']: probe['name'] for probe in data['msg']}
-
-    if not d:
-        raise Exception("Could not find any probes for %s gene. Check "
-                        "http://help.brain-map.org/download/attachments/2818165/HBA_ISH_GeneList.pdf?version=1&modificationDate=1348783035873 "
-                        "for list of available genes." % gene_name)
-
-    return d
+    return probe_lookup
 
 
 def get_expression_values_from_probe_ids(probe_ids, restapi=True):

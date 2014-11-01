@@ -2,7 +2,39 @@ import os
 import pandas as pd
 import numpy as np
 from glob import glob
+import pickle
+from api import get_genes
 
+def allen_probes_csv_to_pickle(probes_csv, pickle_output="data/probes.pkl"):
+    """Reads in Allen Brain Atlas probes.csv file, outputs a pickle data table of probes"""
+    probes = pd.read_csv(probes_csv,header=None)
+    # I'm not totally sure about the structure/well id colnames, but we just need genes and probe ids'
+    probes.columns = ["id","name","structure_id","gene","description","parent_structure_id","well_id"]
+    probes.to_pickle(pickle_complete_output)
+
+def allen_get_unique_genes_pickle(probes_input="data/probes.pkl", pickle_output="data/unique_genes.pkl"):
+    """Reads in Allen Brain Atlas probes pickle file, outputs unique genes pickle"""
+    probes = pd.io.pickle.read_pickle(probes_input)
+    # Now we want to parse a dictionary of probes associated with each gene
+    genes = [gene for gene in probes["gene"]]
+    genes = list(np.unique(genes))
+    genes = [g.replace("'","") for g in genes]
+    # Remove any 'na' values
+    genes.pop(genes.index("na"))
+    pickle.dump(genes,open( pickle_output, "wb" ) )
+
+def allen_make_gene_probe_lookup_pickle(pickle_output="data/gene_probe_lookup.pkl")
+    """Reads in Allen Brain Atlas unique genes pickle file, outputs gene lookup pickle"""
+    unique_genes = get_genes()
+    gene_lookup = get_probes_from_genes(unique_genes)
+    # This would take forever
+    #ids = [theid for theid in probes["id"]]
+    #print "Saving pickle list to file... this can take some time."
+    #probe_list = {gene:{probe[1]["id"]:probe[1]["name"] for probe in probes.iterrows() if probe[1]["gene"] == gene} for gene in genes}
+    pickle.dump(gene_lookup,open( pickle_output, "wb" ) )
+
+
+# TODO: Update to save to pickle, I don't have hd5 headers and can't get to work'
 def allen_csv_to_hdf(donors_dir, hdf_output='data/microarray_expression.h5'):
     """Takes a directory with one subdirectory for each donor containing a
     SampleAnnot.csv and MicroarrayExpression.csv files. The output is a 

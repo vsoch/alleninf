@@ -5,11 +5,9 @@ import numpy as np
 import pandas as pd
 import nibabel as nb
 
-from alleninf.api import get_probes_from_genes,\
-    get_expression_values_from_probe_ids, get_mni_coordinates_from_wells
+from alleninf.api import get_probes_from_genes,get_genes_lookup,get_expression_values_from_probe_ids,get_mni_coordinates_from_wells
 from alleninf.data import get_values_at_locations, combine_expression_values
-from alleninf.analysis import fixed_effects, approximate_random_effects,\
-    bayesian_random_effects
+from alleninf.analysis import fixed_effects, approximate_random_effects, bayesian_random_effects
 
 
 def nifti_file(string):
@@ -38,6 +36,7 @@ def main():
     parser.add_argument("gene_name", help="Name of the gene you want to compare your map with. For list of all available genes see: "
                         "http://help.brain-map.org/download/attachments/2818165/HBA_ISH_GeneList.pdf?version=1&modificationDate=1348783035873.",
                         type=str)
+    parser.add_argument("all_genes", help="True if you want to compare statistical map with all 29K genes in the atlas",type=bool)
     parser.add_argument("--inference_method", help="Which model to use: fixed - fixed effects, approximate_random - approximate random effects (default), "
                         "bayesian_random - Bayesian hierarchical model (requires PyMC3).",
                         default="approximate_random")
@@ -57,10 +56,19 @@ def main():
 
     args = parser.parse_args()
 
-    print "Fetching probe ids for gene %s" % args.gene_name
-    probes_dict = get_probes_from_genes(args.gene_name)
-    print "Found %s probes: %s" % (len(probes_dict), ", ".join(probes_dict.values()))
+    if args.all_genes:
+      # Load gene lookup table we have saved
+      probes_dict = get_genes_lookup()
+      print "Found %s genes." % (len(probes_dict))
+    else:
+      # Here is analysis for specific subset of genes
+      print "Fetching probe ids for gene %s" % args.gene_name
+      probes_dict = get_probes_from_genes(args.gene_name)
+      print "Found %s probes: %s" % (len(probes_dict), ", ".join(probes_dict.values()))
 
+    # TODO: STOPPED AT THIS POINT - still creating data object with ALL THE GENES :)
+    # TODO: Need to test this - need to fix for > 1 gene
+    # If we want to remove any of the genes in the set from the analysis
     if args.probe_exclusion_keyword:
         probes_dict = {probe_id: probe_name for (probe_id, probe_name) in probes_dict.iteritems() if not args.probe_exclusion_keyword in probe_name}
         print "Probes after applying exclusion cryterion: %s" % (", ".join(probes_dict.values()))

@@ -1,8 +1,7 @@
 import pylab as plt
 import seaborn as sns
 import numpy as np
-from scipy.stats.stats import pearsonr, ttest_1samp, percentileofscore,\
-    linregress
+from scipy.stats.stats import pearsonr, ttest_1samp, percentileofscore,linregress
 
 def fixed_effects(data, labels):
     

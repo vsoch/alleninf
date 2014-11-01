@@ -20,7 +20,7 @@ setup(
     long_description=long_description,
 
     # The project URL.
-    url='https://github.com/chrisfilo/alleninf',
+    url='https://github.com/vsoch/alleninf',
 
     # Choose your license
     license='BSD',
@@ -58,8 +58,8 @@ setup(
                         'scipy',
                         'matplotlib',
                         'pandas >= 0.14',
-                        'tables',
-                        'seaborn',
+                        #'tables',
+                        #'seaborn',
                         'scikit-learn',
                         'nibabel'],
 
