@@ -15,7 +15,7 @@ for (i in 1:length(mrs)){
   mr = mrs[i]
   nifti_file = paste(input_folder,"/",mr,sep="")
   output_prefix = gsub("_z_FDR_0.05.nii.gz","",mr)
-  outfile = paste(output_dir,"/",output_prefix,"_allen_brain_inference.tsv",sep="")
+  outfile = paste(output_dir,"/",output_prefix,"_allen_brain_inference_fixed.tsv",sep="")
   jobby = paste(output_prefix,".job",sep="")
   sink(file=paste(output_dir,"/.job/",jobby,sep=""))
   cat("#!/bin/bash\n")
@@ -25,7 +25,7 @@ for (i in 1:length(mrs)){
   cat("#SBATCH --time=2-00:00\n",sep="")
   cat("#SBATCH --mem=64000\n",sep="")
   cat("source /home/vsochat/python-lapack-blas/bin/activate\n")
-  cat("alleninf --radius 3 --out ",outfile,nifti_file,"\n")
+  cat("alleninf --radius 3 --out --inference_method fixed ",outfile,nifti_file,"\n")
   sink()
     
   # SUBMIT R SCRIPT TO RUN ON CLUSTER  
