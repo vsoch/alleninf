@@ -36,13 +36,22 @@ def main():
     parser.add_argument("--probes_reduction_method", help="How to combine multiple probes: average (default) or pca - use first principal component (requires scikit-learn).",default="average")
     parser.add_argument("--mask", help="Explicit mask for the analysis in the form of a 3D NIFTI file (.nii or .nii.gz) in the same space and dimensionality as the stat_map. If not specified an implicit mask (non zero and non NaN voxels) will be used.",type=nifti_file)
     parser.add_argument("--radius", help="Radius in mm of of the sphere used to average statistical values at the location of each probe (default: 4mm).",default=4, type=float)
-    parser.add_argument("--out", help="Full path to output file",default="alleninf_analaysis_output.tsv", type=str)
+    parser.add_argument("out", help="Full path to output file",default="alleninf_analaysis_output.tsv", type=str)
+    parser.add_argument("--gene", help="Perform analysis for a specific gene only.",default=None, type=str)
+    parser.add_argument("--data", help="Export data for all genes: a csv with expression values.",default=False, type=bool)
 
     args = parser.parse_args()
 
     # Get complete list of probes assigned to each gene
     probes_dict = get_probe_lookup()
-    print "Found %s genes each with assigned probes." % (len(probes_dict))
+
+    # If we are only querying for one gene:
+    if args.gene:
+      print "Performing analysis with gene %s" % (str(args.gene))
+      tmp = probes_dict[gene]
+      probes_dict = {gene:tmp}
+    else: 
+      print "Found %s genes each with assigned probes." % (len(probes_dict))
 
     # Get complete samples meta info, and corrected mni coordinates
     samples = get_samples()
@@ -59,6 +68,9 @@ def main():
 
     # We will save fixed effects corcoeff, p value, and approx. random effects
     res = []
+
+    # If the user wants to output data
+    if args.data:  output_data = dict()
 
     # Combine expression values across probes
     for gene,probes in probes_dict.iteritems():
@@ -90,13 +102,21 @@ def main():
         average_slope, t, p_val = approximate_random_effects(data, names, "Donor ID")
         result = [gene,str(len(probes)),",".join(probes.values()),t,p_val,average_slope]
         res.append(result)
-    
+
+    # If the user wants to output data
+    if args.data: output_data[gene] = data
+
     if args.inference_method == "approximate_random":
       result = pd.DataFrame(res,columns=["gene","probe_count","probes","t","p_value","average_slope"])
     if args.inference_method == "fixed":
       result = pd.DataFrame(res,columns=["gene","probe_count","probes","corrcoeff","p_value"])
+    
     print "Saving result to output file " + str(args.out) + "..."
     result.to_csv(args.out,sep="\t")
+    if args.data:
+      output_file = "%s/%s_%s_alleninf.csv" % (os.path.dirname(args.out),gene,os.path.basename(re.sub(".nii.gz|.nii.gz|.img","",args.stat_map)))
+      print "Saving raw data files for all genes in %s" %(output_file)
+      output_data[gene].to_csv(output_file)
 
 if __name__ == '__main__':
     main()
