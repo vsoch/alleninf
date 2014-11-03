@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 import nibabel as nb
+import re
 
 import alleninf.api
 from alleninf.utils import get_probe_lookup, get_probe_expression, get_samples
@@ -48,8 +49,8 @@ def main():
     # If we are only querying for one gene:
     if args.gene:
       print "Performing analysis with gene %s" % (str(args.gene))
-      tmp = probes_dict[gene]
-      probes_dict = {gene:tmp}
+      tmp = probes_dict[args.gene]
+      probes_dict = {args.gene:tmp}
     else: 
       print "Found %s genes each with assigned probes." % (len(probes_dict))
 
