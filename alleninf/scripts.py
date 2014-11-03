@@ -95,7 +95,7 @@ def main():
       result = pd.DataFrame(res,columns=["gene","probe_count","probes","t","p_value","average_slope"])
     if args.inference_method == "fixed":
       result = pd.DataFrame(res,columns=["gene","probe_count","probes","corrcoeff","p_value"])
-    print "Saving result to output file " + str(args.output_file) + "..."
+    print "Saving result to output file " + str(args.out) + "..."
     result.to_csv(args.out,sep="\t")
 
 if __name__ == '__main__':
