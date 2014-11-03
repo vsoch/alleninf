@@ -26,8 +26,8 @@ Usage
 	usage: scripts.py [-h] [--inference_method INFERENCE_METHOD]
 	                  [--probes_reduction_method PROBES_REDUCTION_METHOD]
 	                  [--mask MASK] [--radius RADIUS]
-	                  [--out OUTPUT_TSV_FILE ]
-	                  stat_map
+	                  [--gene GENE ] [ --data BOOLEAN ]
+	                  stat_map out
 	
 	Compare a statistical map with gene expression patterns from Allen Human Brain
 	Atlas.
@@ -35,9 +35,16 @@ Usage
 	required arguments:
 	  stat_map              Unthresholded statistical map in the form of a 3D
 	                        NIFTI file (.nii or .nii.gz) in MNI space.
+
+	  out                   Full path of output file for result (AKR7A3_alleninf.tsv).
+                                The basename will be used for the data file, if specified True
 	
 	optional arguments:
 	  -h, --help            show this help message and exit
+
+	  --gene                Perform analysis for only one gene
+
+	  --data                If True, output data file with gene expression and map values
 
 	  --inference_method INFERENCE_METHOD
 	                        Which model to use: fixed - fixed effects,
@@ -64,5 +71,14 @@ Example
 -------
 
     # Querying for a single gene
-    $ alleninf Tstat.nii.gz --mask mask.nii.gz --out outfile.tsv
-
+    $ alleninf --gene $GENE --radius 3 --data True dso_1307_pAgF_z_FDR_0.05.nii.gz $OUTDIR/$GENE"_alleninf.tsv"
+    Performing analysis with gene MB
+    Loading expression from file...
+    Getting values in nifti map at Allen samples locations...
+    No mask provided - using implicit (not NaN, not zero) mask
+    Combining expression values for gene MB
+    3410 wells fall outside of the mask
+    Performing approximate random effect analysis
+    Averaged slope across donors = -0.105336 (t=-18.5487, p=8.38119e-06)
+    Saving result to output file /home/vanessa/Documents/Work/GENE_EXPRESSION/alleninf/MB_alleninf.tsv...
+    Saving raw data files for all genes in /home/vanessa/Documents/Work/GENE_EXPRESSION/alleninf/MB_dso_1307_pAgF_z_FDR_0.05_alleninf.csv
