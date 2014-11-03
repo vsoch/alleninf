@@ -13,7 +13,7 @@ Installation
 ------------
 
     git clone https://github.com/vsoch/alleninf.git
-    Download data:     https://www.dropbox.com/s/se9bn2rd1glbzqu/data_unzip_me.zip?dl=0
+    [Download Data](https://www.dropbox.com/s/se9bn2rd1glbzqu/data_unzip_me.zip?dl=0)
     Move into folder:  mv Downloads/data_unzip_me.zip /alleninf/alleninf
     Unzip:             unzip alleninf/alleninf/data_unzip_me.zip
     Install:           sudo python setup.py install
