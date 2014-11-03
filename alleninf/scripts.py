@@ -5,10 +5,10 @@ import numpy as np
 import pandas as pd
 import nibabel as nb
 
-from alleninf.api import get_probes_from_genes,get_genes_lookup,get_expression_values_from_probe_ids,get_mni_coordinates_from_wells
-from alleninf.data import get_values_at_locations, combine_expression_values
-from alleninf.analysis import fixed_effects, approximate_random_effects, bayesian_random_effects
-
+import alleninf.api
+from alleninf.utils import get_probe_lookup, get_probe_expression, get_samples
+from alleninf.analysis import fixed_effects, approximate_random_effects
+from alleninf.data import combine_expression_values, get_values_at_locations
 
 def nifti_file(string):
     if not os.path.exists(string):
@@ -31,89 +31,72 @@ def nifti_file(string):
 def main():
     parser = argparse.ArgumentParser(
         description="Compare a statistical map with gene expression patterns from Allen Human Brain Atlas.")
-    parser.add_argument(
-        "stat_map", help="Unthresholded statistical map in the form of a 3D NIFTI file (.nii or .nii.gz) in MNI space.", type=nifti_file)
-    parser.add_argument("gene_name", help="Name of the gene you want to compare your map with. For list of all available genes see: "
-                        "http://help.brain-map.org/download/attachments/2818165/HBA_ISH_GeneList.pdf?version=1&modificationDate=1348783035873.",
-                        type=str)
-    parser.add_argument("all_genes", help="True if you want to compare statistical map with all 29K genes in the atlas",type=bool)
-    parser.add_argument("--inference_method", help="Which model to use: fixed - fixed effects, approximate_random - approximate random effects (default), "
-                        "bayesian_random - Bayesian hierarchical model (requires PyMC3).",
-                        default="approximate_random")
-    parser.add_argument("--n_samples", help="(Bayesian hierarchical model) Number of samples for MCMC model estimation (default 2000).",
-                        default=2000, type=int)
-    parser.add_argument("--n_burnin", help="(Bayesian hierarchical model) How many of the first samples to discard (default 500).",
-                        default=500, type=float)
-    parser.add_argument("--probes_reduction_method", help="How to combine multiple probes: average (default) or pca - use first principal component (requires scikit-learn).",
-                        default="average")
-    parser.add_argument("--mask", help="Explicit mask for the analysis in the form of a 3D NIFTI file (.nii or .nii.gz) in the same space and "
-                        "dimensionality as the stat_map. If not specified an implicit mask (non zero and non NaN voxels) will be used.",
-                        type=nifti_file)
-    parser.add_argument("--radius", help="Radius in mm of of the sphere used to average statistical values at the location of each probe (default: 4mm).",
-                        default=4, type=float)
-    parser.add_argument("--probe_exclusion_keyword", help="If the probe name includes this string the probe will not be used.",
-                        type=str)
+    parser.add_argument("stat_map", help="Unthresholded statistical map in the form of a 3D NIFTI file (.nii or .nii.gz) in MNI space.", type=nifti_file)
+    parser.add_argument("--inference_method", help="Which model to use: fixed - fixed effects, approximate_random - approximate random effects (default), ",default="approximate_random")
+    parser.add_argument("--probes_reduction_method", help="How to combine multiple probes: average (default) or pca - use first principal component (requires scikit-learn).",default="average")
+    parser.add_argument("--mask", help="Explicit mask for the analysis in the form of a 3D NIFTI file (.nii or .nii.gz) in the same space and dimensionality as the stat_map. If not specified an implicit mask (non zero and non NaN voxels) will be used.",type=nifti_file)
+    parser.add_argument("--radius", help="Radius in mm of of the sphere used to average statistical values at the location of each probe (default: 4mm).",default=4, type=float)
+    parser.add_argument("--out", help="Full path to output file",default="alleninf_analaysis_output.tsv", type=str)
 
     args = parser.parse_args()
 
-    if args.all_genes:
-      # Load gene lookup table we have saved
-      probes_dict = get_genes_lookup()
-      print "Found %s genes." % (len(probes_dict))
-    else:
-      # Here is analysis for specific subset of genes
-      print "Fetching probe ids for gene %s" % args.gene_name
-      probes_dict = get_probes_from_genes(args.gene_name)
-      print "Found %s probes: %s" % (len(probes_dict), ", ".join(probes_dict.values()))
+    # Get complete list of probes assigned to each gene
+    probes_dict = get_probe_lookup()
+    print "Found %s genes each with assigned probes." % (len(probes_dict))
 
-    # TODO: STOPPED AT THIS POINT - still creating data object with ALL THE GENES :)
-    # TODO: Need to test this - need to fix for > 1 gene
-    # If we want to remove any of the genes in the set from the analysis
-    if args.probe_exclusion_keyword:
-        probes_dict = {probe_id: probe_name for (probe_id, probe_name) in probes_dict.iteritems() if not args.probe_exclusion_keyword in probe_name}
-        print "Probes after applying exclusion cryterion: %s" % (", ".join(probes_dict.values()))
+    # Get complete samples meta info, and corrected mni coordinates
+    samples = get_samples()
+    mni_coordinates = list(samples[["corrected_mni_x","corrected_mni_y","corrected_mni_z"]].itertuples(index=False))
+    donors = list(samples["id"])
 
-    print "Fetching expression values for probes %s" % (", ".join(probes_dict.values()))
-    expression_values, well_ids, donor_names = get_expression_values_from_probe_ids(
-        probes_dict.keys())
-    print "Found data from %s wells sampled across %s donors" % (len(well_ids), len(set(donor_names)))
+    # Get all expression values
+    print "Loading expression from file..."
+    expression = get_probe_expression()
 
-    print "Combining information from selected probes"
-    combined_expression_values = combine_expression_values(
-        expression_values, method=args.probes_reduction_method)
+    # Get MNI coordinates of nifti file
+    print "Getting values in nifti map at Allen samples locations..."
+    nifti_values = get_values_at_locations(args.stat_map, mni_coordinates, mask_file=args.mask, radius=args.radius, verbose=True)
 
-    print "Translating locations of the wells to MNI space"
-    mni_coordinates = get_mni_coordinates_from_wells(well_ids)
+    # We will save fixed effects corcoeff, p value, and approx. random effects
+    res = []
 
-    print "Checking values of the provided NIFTI file at well locations"
-    nifti_values = get_values_at_locations(
-        args.stat_map, mni_coordinates, mask_file=args.mask, radius=args.radius, verbose=True)
-
-    # preparing the data frame
-    names = ["NIFTI values", "%s expression" % args.gene_name, "donor ID"]
-    data = pd.DataFrame(np.array(
-        [nifti_values, combined_expression_values, donor_names]).T, columns=names)
-    data = data.convert_objects(convert_numeric=True)
-    len_before = len(data)
-    data.dropna(axis=0, inplace=True)
-    nans = len_before - len(data)
-    if nans > 0:
+    # Combine expression values across probes
+    for gene,probes in probes_dict.iteritems():
+      print "Combining expression values for gene %s" % (gene)
+      # Get combined expression values
+      expression_values = expression[expression["ID"].isin(probes.keys())]
+      expression_values = expression_values.drop('ID', 1)
+      combined_expression_values = combine_expression_values(expression_values, method=args.probes_reduction_method)
+    
+      # Put results into data frame
+      names = ["NIFTI values", "%s expression" % gene, "Donor ID"]
+      data = pd.DataFrame(np.transpose(np.array([nifti_values, combined_expression_values, donors])), columns=names)
+      data = data.convert_objects(convert_numeric=True)
+      length_before = len(data)
+      data.dropna(axis=0, inplace=True)
+      nans = length_before - len(data)
+      # This coverage is an issue
+      if nans > 0:
         print "%s wells fall outside of the mask" % nans
 
-    if args.inference_method == "fixed":
+      if args.inference_method == "fixed":
         print "Performing fixed effect analysis"
-        fixed_effects(data, ["NIFTI values", "%s expression" % args.gene_name])
+        corcoeff, p_val = fixed_effects(data, names)
+        result = [gene,str(len(probes)),",".join(probes.values()),corcoeff,p_val]
+        res.append(result)
 
-    if args.inference_method == "approximate_random":
+      if args.inference_method == "approximate_random":
         print "Performing approximate random effect analysis"
-        approximate_random_effects(
-            data, ["NIFTI values", "%s expression" % args.gene_name], "donor ID")
-
-    if args.inference_method == "bayesian_random":
-        print "Fitting Bayesian hierarchical model"
-        bayesian_random_effects(
-            data, ["NIFTI values", "%s expression" % args.gene_name], "donor ID", args.n_samples, args.n_burnin)
-
+        average_slope, t, p_val = approximate_random_effects(data, names, "Donor ID")
+        result = [gene,str(len(probes)),",".join(probes.values()),t,p_val,average_slope]
+        res.append(result)
+    
+    if args.inference_method == "approximate_random":
+      result = pd.DataFrame(res,columns=["gene","probe_count","probes","t","p_value","average_slope"])
+    if args.inference_method == "fixed":
+      result = pd.DataFrame(res,columns=["gene","probe_count","probes","corrcoeff","p_value"])
+    print "Saving result to output file " + str(args.output_file) + "..."
+    result.to_csv(args.out,sep="\t")
 
 if __name__ == '__main__':
     main()

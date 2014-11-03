@@ -30,7 +30,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 4 - Beta',
+        'Development Status :: 3 - Beta',
 
         # Indicate who your project is intended for
 #         'Intended Audience :: Developers',
@@ -58,8 +58,6 @@ setup(
                         'scipy',
                         'matplotlib',
                         'pandas >= 0.14',
-                        #'tables',
-                        #'seaborn',
                         'scikit-learn',
                         'nibabel'],
 
@@ -67,7 +65,7 @@ setup(
     # installed, specify them here.  If using Python 2.6 or less, then these
     # have to be included in MANIFEST.in as well.
     package_data={
-        'alleninf': ['data/corrected_mni_coordinates.csv'],
+        #'alleninf': ['data/corrected_mni_coordinates.csv'],
     },
 
     # To provide executable scripts, use entry points in preference to the
